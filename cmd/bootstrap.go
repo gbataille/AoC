@@ -9,10 +9,6 @@ import (
 	"github.com/gbataille/AoC_2022/pkg/bootstrap"
 )
 
-const (
-	dayFlag = "day"
-)
-
 // bootstrapCmd represents the bootstrap command
 var bootstrapCmd = &cobra.Command{
 	Use:   "bootstrap",
@@ -23,15 +19,16 @@ var bootstrapCmd = &cobra.Command{
 - the downloaded input file for the problem
 `,
 	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		var day uint64
 		dayStr := cmd.Flag(dayFlag).Value.String()
-		day, err := strconv.ParseUint(dayStr, 10, 64)
+		day, err = strconv.ParseUint(dayStr, 10, 64)
 		if err != nil {
 			return errors.Errorf("invalid argument '%v' %v. Must be a number between 1 and 25\n", dayFlag, dayStr)
 		}
 
-		bootstrap.InitializeDay(day)
-		return nil
+		err = bootstrap.InitializeDay(day)
+		return err
 	},
 }
 

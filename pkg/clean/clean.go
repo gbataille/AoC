@@ -1,4 +1,4 @@
-package bootstrap
+package clean
 
 import (
 	"fmt"
@@ -7,17 +7,17 @@ import (
 	"strconv"
 )
 
-func InitializeDay(day uint64) error {
+func CleanDay(day uint64) error {
 	fmt.Printf("Initializing day %v\n", day)
 
-	createFolder(day)
+	removeFolder(day)
 
 	return nil
 }
 
-func createFolder(day uint64) error {
+func removeFolder(day uint64) error {
 	dirName := fmt.Sprintf("day%v", strconv.FormatUint(day, 10))
-	fmt.Printf("Creating the day's directory %v\n", dirName)
+	fmt.Printf("Removing the day's directory %v\n", dirName)
 
 	curDir, err := os.Getwd()
 	if err != nil {
@@ -25,7 +25,7 @@ func createFolder(day uint64) error {
 	}
 
 	dayDir := path.Join(curDir, dirName)
-	err = os.Mkdir(dayDir, os.ModePerm)
+	err = os.RemoveAll(dayDir)
 	if err != nil {
 		return err
 	}
