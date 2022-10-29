@@ -8,9 +8,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func Test_SolvePart1(t *testing.T) {
+	// LogLevel.SetLevel(zap.DebugLevel)
+
   curDir, err := os.Getwd()
   require.NoError(t, err)
   bInput, err := os.ReadFile(path.Join(curDir, "input.txt"))
@@ -22,6 +25,8 @@ func Test_SolvePart1(t *testing.T) {
 }
 
 func Test_SolvePart2(t *testing.T) {
+	// LogLevel.SetLevel(zap.DebugLevel)
+
   curDir, err := os.Getwd()
   require.NoError(t, err)
   bInput, err := os.ReadFile(path.Join(curDir, "input.txt"))
@@ -33,6 +38,8 @@ func Test_SolvePart2(t *testing.T) {
 }
 
 func Test_RunPart1(t *testing.T) {
+	// LogLevel.SetLevel(zap.DebugLevel)
+
   input := `
 `
   res, err := Part1(input)
@@ -41,6 +48,8 @@ func Test_RunPart1(t *testing.T) {
 }
 
 func Test_RunPart2(t *testing.T) {
+	// LogLevel.SetLevel(zap.DebugLevel)
+
   input := `
 `
   res, err := Part2(input)
@@ -49,6 +58,7 @@ func Test_RunPart2(t *testing.T) {
 }
 
 func Test_TableTest(t *testing.T) {
+	LogLevel.SetLevel(zap.InfoLevel)
   tests := []struct{
     PartNumber int
     InputData string
