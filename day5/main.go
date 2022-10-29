@@ -1,15 +1,15 @@
-package day{{.DayNumber}}
+package day5
 
 import "fmt"
 
 func main() {
-  fmt.Println("Day {{.DayNumber}}")
+  fmt.Println("Day 5")
 }
 
 // Part1 solves the Part 1 of the problem
 func Part1(inputData string) (string, error) {
   var res string
-  fmt.Println("Running day {{.DayNumber}} Part 1")
+  fmt.Println("Running day 5 Part 1")
 
   return res, nil
 }
@@ -17,7 +17,7 @@ func Part1(inputData string) (string, error) {
 // Part2 solves the Part 2 of the problem
 func Part2(inputData string) (string, error) {
   var res string
-  fmt.Println("Running day {{.DayNumber}} Part 2")
+  fmt.Println("Running day 5 Part 2")
 
   return res, nil
 }
