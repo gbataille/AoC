@@ -2,6 +2,8 @@ package y{{.Year}}day{{.DayNumber}}
 
 import (
 	"fmt"
+  "os"
+  "path"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -9,16 +11,22 @@ import (
 )
 
 func Test_SolvePart1(t *testing.T) {
-  input := `
-`
+  curDir, err := os.Getwd()
+  require.NoError(t, err)
+  bInput, err := os.ReadFile(path.Join(curDir, "input.txt"))
+  require.NoError(t, err)
+  input := string(bInput)
   res, err := Part1(input)
   require.NoError(t, err)
   fmt.Println(res)
 }
 
 func Test_SolvePart2(t *testing.T) {
-  input := `
-`
+  curDir, err := os.Getwd()
+  require.NoError(t, err)
+  bInput, err := os.ReadFile(path.Join(curDir, "input.txt"))
+  require.NoError(t, err)
+  input := string(bInput)
   res, err := Part2(input)
   require.NoError(t, err)
   fmt.Println(res)
