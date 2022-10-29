@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 Grégory Bataille gregory.bataille@gmail.com
-
 */
 package cmd
 
@@ -8,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/gbataille/AoC_2022/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -69,4 +69,6 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+
+	config.Setup()
 }
