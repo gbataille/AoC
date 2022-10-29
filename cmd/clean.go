@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/gbataille/AoC_2022/pkg/clean"
+	"github.com/gbataille/AoC_2022/internal/clean"
 )
 
 // bootstrapCmd represents the bootstrap command
@@ -14,7 +14,7 @@ var cleanCmd = &cobra.Command{
 	Use:          "clean",
 	Short:        "Cleans a problem's directory",
 	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		var day uint64
 		dayStr := cmd.Flag(dayFlag).Value.String()
 		day, err = strconv.ParseUint(dayStr, 10, 64)
