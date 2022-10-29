@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gbataille/AoC_2022/internal/config"
+	"github.com/gbataille/AoC_2022/internal/logging"
 )
 
 type TemplateData struct {
@@ -18,7 +19,7 @@ type TemplateData struct {
 }
 
 func InitializeDay(day uint64) error {
-	fmt.Printf("Initializing day %v\n", day)
+	logging.Logger.Infof("Initializing day %v", day)
 
 	folder, err := createFolder(day)
 	if err != nil {
@@ -45,7 +46,7 @@ func InitializeDay(day uint64) error {
 
 func createFolder(day uint64) (string, error) {
 	dirName := fmt.Sprintf("y%vd%v", config.Year(), strconv.FormatUint(day, 10))
-	fmt.Printf("Creating the day's directory %v\n", dirName)
+	logging.Logger.Infof("Creating the day's directory %v", dirName)
 
 	curDir, err := os.Getwd()
 	if err != nil {
@@ -62,7 +63,7 @@ func createFolder(day uint64) (string, error) {
 }
 
 func createMain(day uint64, folderPath string) error {
-	fmt.Println("Creating the day's main file")
+	logging.Logger.Infof("Creating the day's main file")
 
 	const TemplateName = "day.main.go.tmpl"
 
@@ -96,7 +97,7 @@ func createMain(day uint64, folderPath string) error {
 }
 
 func createMainTest(day uint64, folderPath string) error {
-	fmt.Println("Creating the day's main_test file")
+	logging.Logger.Infoln("Creating the day's main_test file")
 
 	const TemplateName = "day.main_test.go.tmpl"
 

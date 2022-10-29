@@ -4,10 +4,10 @@ Copyright © 2022 Grégory Bataille gregory.bataille@gmail.com
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/gbataille/AoC_2022/internal/config"
+	"github.com/gbataille/AoC_2022/internal/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -41,6 +41,12 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.AoC_2022.yaml)")
+	envLogLevel := os.Getenv("LOGLEVEL")
+	defaultLogLevel := envLogLevel
+	if defaultLogLevel == "" {
+		defaultLogLevel = "info"
+	}
+	rootCmd.PersistentFlags().StringVar(&logging.LogLevel, "logLevel", defaultLogLevel, "log level")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -67,8 +73,9 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		logging.Logger.Debugln("Using config file:", viper.ConfigFileUsed())
 	}
 
 	config.Setup()
+	logging.Setup()
 }
