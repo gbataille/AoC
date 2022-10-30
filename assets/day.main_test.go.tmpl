@@ -1,4 +1,4 @@
-package y{{.Year}}day{{.DayNumber}}
+package day{{.DayNumber}}
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ func Test_SolvePart1(t *testing.T) {
   input := string(bInput)
   res, err := Part1(input)
   require.NoError(t, err)
-  fmt.Println(res)
+  printResult(res)
 }
 
 func Test_SolvePart2(t *testing.T) {
@@ -34,7 +34,7 @@ func Test_SolvePart2(t *testing.T) {
   input := string(bInput)
   res, err := Part2(input)
   require.NoError(t, err)
-  fmt.Println(res)
+  printResult(res)
 }
 
 func Test_RunPart1(t *testing.T) {
@@ -44,7 +44,7 @@ func Test_RunPart1(t *testing.T) {
 `
   res, err := Part1(input)
   require.NoError(t, err)
-  fmt.Println(res)
+  printResult(res)
 }
 
 func Test_RunPart2(t *testing.T) {
@@ -54,7 +54,7 @@ func Test_RunPart2(t *testing.T) {
 `
   res, err := Part2(input)
   require.NoError(t, err)
-  fmt.Println(res)
+  printResult(res)
 }
 
 func Test_TableTest(t *testing.T) {
@@ -84,4 +84,17 @@ func Test_TableTest(t *testing.T) {
       require.Equal(t, test.ExpectedOutput, result)
     })
   }
+}
+
+func printResult(res string) {
+  fmt.Println()
+  fmt.Println()
+  fmt.Println("######################")
+  fmt.Println("Result:")
+  fmt.Println()
+  fmt.Println(res)
+  fmt.Println()
+  fmt.Println("######################")
+  fmt.Println()
+  fmt.Println()
 }

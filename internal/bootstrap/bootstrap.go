@@ -11,10 +11,10 @@ import (
 
 	"github.com/gbataille/AoC_2022/internal/config"
 	"github.com/gbataille/AoC_2022/internal/logging"
+	"github.com/gbataille/AoC_2022/internal/problems"
 )
 
 type TemplateData struct {
-	Year      uint64
 	DayNumber uint64
 }
 
@@ -45,21 +45,32 @@ func InitializeDay(day uint64) error {
 }
 
 func createFolder(day uint64) (string, error) {
-	dirName := fmt.Sprintf("y%vd%v", config.Year(), strconv.FormatUint(day, 10))
-	logging.Logger.Infof("Creating the day's directory %v", dirName)
-
-	curDir, err := os.Getwd()
+	dayDirPath, err := problems.DirectoryForDay(day)
 	if err != nil {
 		return "", err
 	}
 
-	dayDir := path.Join(curDir, dirName)
-	err = os.Mkdir(dayDir, os.ModePerm)
+	yearDirPath := path.Dir(dayDirPath)
+	err = os.Mkdir(yearDirPath, os.ModeDir|os.ModePerm)
+	if err != nil {
+		if os.IsExist(err) {
+			logging.Logger.Infof("Year folder %s already exists", yearDirPath)
+		} else {
+			return "", err
+		}
+	} else {
+		logging.Logger.Infof("Created year folder %s", yearDirPath)
+	}
+
+	dayDirName := fmt.Sprintf("d%v", strconv.FormatUint(day, 10))
+	logging.Logger.Infof("Creating the day's directory %v", dayDirName)
+
+	err = os.Mkdir(dayDirPath, os.ModePerm)
 	if err != nil {
 		return "", err
 	}
 
-	return dayDir, nil
+	return dayDirPath, nil
 }
 
 func createMain(day uint64, folderPath string) error {
@@ -78,7 +89,7 @@ func createMain(day uint64, folderPath string) error {
 		return err
 	}
 
-	outFilePath := path.Join(folderPath, "main.go")
+	outFilePath := path.Join(folderPath, fmt.Sprintf("d%d.go", day))
 	outFile, err := os.Create(outFilePath)
 	if err != nil {
 		return err
@@ -87,7 +98,6 @@ func createMain(day uint64, folderPath string) error {
 
 	err = tmpl.Execute(outFile, TemplateData{
 		DayNumber: day,
-		Year:      config.Year(),
 	})
 	if err != nil {
 		return err
@@ -112,7 +122,7 @@ func createMainTest(day uint64, folderPath string) error {
 		return err
 	}
 
-	outFilePath := path.Join(folderPath, "main_test.go")
+	outFilePath := path.Join(folderPath, fmt.Sprintf("d%d_test.go", day))
 	outFile, err := os.Create(outFilePath)
 	if err != nil {
 		return err
@@ -121,7 +131,6 @@ func createMainTest(day uint64, folderPath string) error {
 
 	err = tmpl.Execute(outFile, TemplateData{
 		DayNumber: day,
-		Year:      config.Year(),
 	})
 	if err != nil {
 		return err

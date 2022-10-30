@@ -1,14 +1,14 @@
 package clean
 
 import (
-	"fmt"
 	"os"
-	"path"
-	"strconv"
+
+	"github.com/gbataille/AoC_2022/internal/logging"
+	"github.com/gbataille/AoC_2022/internal/problems"
 )
 
 func CleanDay(day uint64) error {
-	fmt.Printf("Initializing day %v\n", day)
+	logging.Logger.Infof("Cleaning day %v", day)
 
 	removeFolder(day)
 
@@ -16,16 +16,14 @@ func CleanDay(day uint64) error {
 }
 
 func removeFolder(day uint64) error {
-	dirName := fmt.Sprintf("day%v", strconv.FormatUint(day, 10))
-	fmt.Printf("Removing the day's directory %v\n", dirName)
-
-	curDir, err := os.Getwd()
+	dayDirName, err := problems.DirectoryForDay(day)
 	if err != nil {
 		return err
 	}
 
-	dayDir := path.Join(curDir, dirName)
-	err = os.RemoveAll(dayDir)
+	logging.Logger.Infof("Removing the day's directory %v", dayDirName)
+
+	err = os.RemoveAll(dayDirName)
 	if err != nil {
 		return err
 	}
