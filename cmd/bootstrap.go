@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/gbataille/AoC_2022/internal/bootstrap"
+	"github.com/gbataille/AoC_2022/internal/cmd/bootstrap"
 )
 
 // bootstrapCmd represents the bootstrap command
