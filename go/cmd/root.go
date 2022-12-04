@@ -64,6 +64,7 @@ func initConfig() {
 		cobra.CheckErr(err)
 
 		viper.AddConfigPath(curDir)
+		viper.AddConfigPath(curDir + "/..")
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("AoC.yml")

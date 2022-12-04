@@ -11,5 +11,13 @@ name = "d2"
 version = "0.1.0"
 
 [[package]]
+name = "d3"
+version = "0.1.0"
+
+[[package]]
+name = "d4"
+version = "0.1.0"
+
+[[package]]
 name = "rust"
 version = "0.1.0"
