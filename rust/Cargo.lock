@@ -7,7 +7,71 @@ name = "d1"
 version = "0.1.0"
 
 [[package]]
+name = "d10"
+version = "0.1.0"
+
+[[package]]
+name = "d11"
+version = "0.1.0"
+
+[[package]]
+name = "d12"
+version = "0.1.0"
+
+[[package]]
+name = "d13"
+version = "0.1.0"
+
+[[package]]
+name = "d14"
+version = "0.1.0"
+
+[[package]]
+name = "d15"
+version = "0.1.0"
+
+[[package]]
+name = "d16"
+version = "0.1.0"
+
+[[package]]
+name = "d17"
+version = "0.1.0"
+
+[[package]]
+name = "d18"
+version = "0.1.0"
+
+[[package]]
+name = "d19"
+version = "0.1.0"
+
+[[package]]
 name = "d2"
+version = "0.1.0"
+
+[[package]]
+name = "d20"
+version = "0.1.0"
+
+[[package]]
+name = "d21"
+version = "0.1.0"
+
+[[package]]
+name = "d22"
+version = "0.1.0"
+
+[[package]]
+name = "d23"
+version = "0.1.0"
+
+[[package]]
+name = "d24"
+version = "0.1.0"
+
+[[package]]
+name = "d25"
 version = "0.1.0"
 
 [[package]]
@@ -20,6 +84,22 @@ version = "0.1.0"
 
 [[package]]
 name = "d5"
+version = "0.1.0"
+
+[[package]]
+name = "d6"
+version = "0.1.0"
+
+[[package]]
+name = "d7"
+version = "0.1.0"
+
+[[package]]
+name = "d8"
+version = "0.1.0"
+
+[[package]]
+name = "d9"
 version = "0.1.0"
 
 [[package]]
