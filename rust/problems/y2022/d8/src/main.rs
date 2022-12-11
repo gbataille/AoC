@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::ops::Index;
 use std::str::FromStr;
 use std::vec::Vec;
 
@@ -8,6 +9,58 @@ fn main() {
 
     part1(&contents);
     part2(&contents);
+    part2_with_iter(&contents);
+}
+
+struct Grid {
+    grid: Vec<Vec<u32>>,
+}
+
+impl Index<usize> for Grid {
+    type Output = Vec<u32>;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.grid[idx]
+    }
+}
+
+impl Grid {
+    fn iter<'a>(&'a self) -> GridIter<'a> {
+        GridIter {
+            data: self,
+            line_idx: 0,
+            col_idx: 0,
+        }
+    }
+}
+
+struct GridIter<'a> {
+    data: &'a Grid,
+    line_idx: usize,
+    col_idx: usize,
+}
+
+impl<'a> Iterator for GridIter<'a> {
+    type Item = (u32, usize, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.col_idx < self.data[0].len() - 1 {
+            self.col_idx += 1;
+        } else {
+            if self.line_idx < self.data.grid.len() - 1 {
+                self.col_idx = 0;
+                self.line_idx += 1;
+            } else {
+                return None;
+            }
+        }
+
+        return Some((
+            self.data[self.line_idx][self.col_idx],
+            self.line_idx,
+            self.col_idx,
+        ));
+    }
 }
 
 fn part1(contents: &String) {
@@ -78,6 +131,23 @@ fn part1(contents: &String) {
     println!("Trees visible: {}", visible_trees.len());
 }
 
+fn part2_with_iter(contents: &String) {
+    let grid = Grid {
+        grid: make_tree_grid(contents),
+    };
+    let mut best_score = 0;
+
+    for (_tree, line_idx, col_idx) in grid.iter() {
+        let score = score_for(&grid.grid, line_idx, col_idx);
+
+        if score > best_score {
+            best_score = score;
+        }
+    }
+
+    println!("Best score {}", best_score);
+}
+
 fn part2(contents: &String) {
     let grid = make_tree_grid(contents);
     let mut best_score = 0;
@@ -92,7 +162,6 @@ fn part2(contents: &String) {
         }
     }
 
-    println!("2520 is too low");
     println!("Best score {}", best_score);
 }
 
@@ -145,10 +214,10 @@ fn score_for(grid: &Vec<Vec<u32>>, line_idx: usize, col_idx: usize) -> u32 {
     }
 
     let score = ls * rs * us * ds;
-    println!(
-        "Score for {}, {} is {} * {} * {} * {} = {}",
-        line_idx, col_idx, us, ls, rs, ds, score
-    );
+    // println!(
+    //     "Score for {}, {} is {} * {} * {} * {} = {}",
+    //     line_idx, col_idx, us, ls, rs, ds, score
+    // );
 
     score
 }
