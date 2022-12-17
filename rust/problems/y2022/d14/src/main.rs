@@ -43,12 +43,67 @@ impl World {
         }
     }
 
+    fn add_sand(&mut self, coord: (i32, i32)) {
+        self.sands_coord.insert(coord);
+        if coord.0 < self.min_x {
+            self.min_x = coord.0;
+        }
+        if coord.0 > self.max_x {
+            self.max_x = coord.0;
+        }
+        if coord.1 < self.min_y {
+            self.min_y = coord.1;
+        }
+        if coord.1 > self.max_y {
+            self.max_y = coord.1;
+        }
+    }
+
+    fn add_floor(&mut self) {
+        for x in self.min_x..=self.max_x {
+            self.rocks_coord.insert((x, self.max_y + 2));
+        }
+        self.max_y += 2;
+    }
+
     fn is_occupied(&self, coord: (i32, i32)) -> bool {
         self.rocks_coord.get(&coord).is_some() || self.sands_coord.get(&coord).is_some()
     }
 
+    fn is_occupied_part2(&self, coord: (i32, i32)) -> bool {
+        self.rocks_coord.get(&coord).is_some()
+            || self.sands_coord.get(&coord).is_some()
+            || coord.1 == self.max_y
+    }
+
     fn is_out(&self, coord: (i32, i32)) -> bool {
         coord.0 < self.min_x || coord.0 > self.max_x || coord.1 > self.max_y || coord.1 < self.min_y
+    }
+
+    fn move_step_part2(&mut self) -> Result<(), Box<dyn Error>> {
+        for attempt in [
+            (self.moving_sand_coord.0, self.moving_sand_coord.1 + 1),
+            (self.moving_sand_coord.0 - 1, self.moving_sand_coord.1 + 1),
+            (self.moving_sand_coord.0 + 1, self.moving_sand_coord.1 + 1),
+        ] {
+            if !self.is_occupied_part2(attempt) {
+                self.moving_sand_coord = attempt;
+                return Ok(());
+            }
+        }
+
+        // did not move, so settled
+
+        // did it clog?
+        if self.moving_sand_coord == (500, 0) {
+            self.add_sand(self.moving_sand_coord);
+            return Err("clogged")?;
+        }
+
+        self.add_sand(self.moving_sand_coord);
+        self.moving_sand_coord = (500, 0);
+
+        Ok(())
     }
 
     fn move_step(&mut self) -> Result<(), Box<dyn Error>> {
@@ -77,7 +132,11 @@ impl World {
         for y in self.min_y..=self.max_y {
             for x in self.min_x..=self.max_x {
                 if y == 0 && x == 500 {
-                    print!("+");
+                    if self.sands_coord.get(&(x, y)).is_some() {
+                        print!("X");
+                    } else {
+                        print!("+");
+                    }
                 } else if x == self.moving_sand_coord.0 && y == self.moving_sand_coord.1 {
                     print!("o");
                 } else if self.sands_coord.get(&(x, y)).is_some() {
@@ -129,7 +188,35 @@ fn part1(contents: &String) {
     println!("\nNb settled sand {}", world.sands_coord.len());
 }
 
-fn part2(contents: &String) {}
+fn part2(contents: &String) {
+    let mut world = World::new();
+    for line in contents.lines() {
+        parse_line(line, &mut world);
+    }
+    world.add_floor();
+
+    world.display();
+
+    let mut step = 1;
+    loop {
+        println!("Step {}", step);
+
+        match world.move_step_part2() {
+            Ok(_) => (),
+            Err(a) => {
+                println!("End with: {}", a);
+                break;
+            }
+        }
+
+        // world.display();
+
+        step += 1;
+    }
+
+    world.display();
+    println!("\nNb settled sand {}", world.sands_coord.len());
+}
 
 fn parse_line(line: &str, world: &mut World) {
     let mut corners: Vec<(i32, i32)> = Vec::new();
