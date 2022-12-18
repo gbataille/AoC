@@ -1,5 +1,5 @@
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 use std::str::FromStr;
 use std::vec::Vec;
@@ -71,7 +71,95 @@ impl World {
         }
     }
 
-    fn scanned_pos(&self, y: i32) -> u32 {
+    fn nb_beacons_and_sensors_at(&self, y: i32) -> i32 {
+        let mut tot = 0;
+        for beacon in self.beacons.iter() {
+            if beacon.1 == y {
+                tot += 1;
+            }
+        }
+        for (sensor, _) in self.sensors.iter() {
+            if sensor.1 == y {
+                tot += 1;
+            }
+        }
+        tot
+    }
+
+    fn scanned_pos_with_ranges(&self, y: i32, clip: bool) -> VecDeque<(i32, i32)> {
+        let min_boundary = 0;
+        let max_boundary = 20;
+        let mut ranges: VecDeque<(i32, i32)> = VecDeque::new();
+
+        for (i, (sensor, sensor_view)) in self.sensors.iter().enumerate() {
+            // println!(
+            //     "\n================\nRunning sensor {} at {:?}, with view {}, for line {}",
+            //     i, sensor, sensor_view, y
+            // );
+            let sensor_range = sensor_range_for_line(&sensor, *sensor_view, y);
+            // println!("Sees {:?} at line {}", sensor_range, y);
+            match sensor_range {
+                None => continue,
+                Some(range) => {
+                    let clipped: (i32, i32);
+                    if clip {
+                        clipped = clip_range(range, min_boundary, max_boundary);
+                    } else {
+                        clipped = range;
+                    }
+                    if ranges.len() == 0 {
+                        ranges.push_back(clipped);
+                        continue;
+                    }
+
+                    let mut new_ranges: VecDeque<(i32, i32)> = VecDeque::new();
+                    let mut cur_range = Some(clipped);
+                    for r in ranges.into_iter() {
+                        match cur_range {
+                            None => new_ranges.push_back(r),
+                            Some(range) => {
+                                // println!("Comparing {:?} and {:?}", &range, &r);
+                                if are_overlapping(range, r) {
+                                    let merged = merge(range, r);
+                                    // println!("Overlapping, result in {:?}", &merged);
+                                    cur_range = Some(merged);
+                                } else {
+                                    if r.0 < range.0 {
+                                        // println!(
+                                        //     "Non verlapping, pushing {:?} keeping {:?}",
+                                        //     &r, &range
+                                        // );
+                                        new_ranges.push_back(r);
+                                        // we continue to try and fit our new range in the ranges
+                                        // list
+                                    } else {
+                                        // println!(
+                                        //     "Non verlapping, pushing {:?} then {:?}",
+                                        //     &range, &r
+                                        // );
+                                        new_ranges.push_back(range);
+                                        new_ranges.push_back(r);
+                                        cur_range = None;
+                                        // the new range is smaller than the last checked and non
+                                        // overlapping, it goes in the range list as is
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    match cur_range {
+                        None => (),
+                        Some(a) => new_ranges.push_back(a),
+                    }
+                    ranges = new_ranges;
+                }
+            }
+        }
+
+        ranges
+    }
+
+    fn scanned_pos_slow(&self, y: i32) -> u32 {
         let mut pos = 0;
 
         for x in self.min_x..=self.max_x {
@@ -120,6 +208,48 @@ impl World {
     }
 }
 
+fn sensor_range_for_line(sensor_coord: &(i32, i32), view_dist: i32, y: i32) -> Option<(i32, i32)> {
+    let y_dist = (y - sensor_coord.1).abs();
+    if y_dist > view_dist {
+        return None;
+    }
+
+    return Some((
+        sensor_coord.0 - view_dist + y_dist,
+        sensor_coord.0 + view_dist - y_dist,
+    ));
+}
+
+fn clip_range(range: (i32, i32), min: i32, max: i32) -> (i32, i32) {
+    let mut from = range.0;
+    let mut to = range.1;
+
+    if from < min {
+        from = min;
+    }
+    if to > max {
+        to = max;
+    }
+
+    (from, to)
+}
+
+fn are_overlapping(a: (i32, i32), b: (i32, i32)) -> bool {
+    (a.0 <= b.1 && a.0 >= b.0) || (a.1 >= b.0 && a.1 <= b.1)
+}
+
+fn merge(a: (i32, i32), b: (i32, i32)) -> (i32, i32) {
+    let mut from = a.0;
+    let mut to = a.1;
+    if b.0 < from {
+        from = b.0;
+    }
+    if b.1 > to {
+        to = b.1;
+    }
+    (from, to)
+}
+
 fn manhattan_dist(a: (i32, i32), b: (i32, i32)) -> i32 {
     (a.0 - b.0).abs() + (a.1 - b.1).abs()
 }
@@ -139,10 +269,16 @@ fn part1(contents: &String) {
     }
 
     // world.display();
-
-    println!("\nline 10 {}", world.scanned_pos(10));
-    println!("\nline 11 {}", world.scanned_pos(11));
-    println!("\nline 2000000 {}", world.scanned_pos(2000000));
+    for y in [10, 11, 2000000] {
+        let ranges = world.scanned_pos_with_ranges(y, false);
+        println!("\nline {}", y);
+        let mut tot = 0;
+        for r in ranges.iter() {
+            tot += r.1 - r.0 + 1;
+        }
+        tot -= world.nb_beacons_and_sensors_at(y);
+        println!("scanned lines {}", tot);
+    }
 }
 
 fn part2(contents: &String) {}
@@ -150,6 +286,16 @@ fn part2(contents: &String) {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_sensor_range() {
+        println!("{:?}", sensor_range_for_line(&(2, 4), 5, 0));
+        println!("{:?}", sensor_range_for_line(&(2, 4), 5, 1));
+        println!("{:?}", sensor_range_for_line(&(2, 4), 5, 8));
+        println!("{:?}", sensor_range_for_line(&(2, 4), 5, 7));
+        println!("{:?}", sensor_range_for_line(&(2, 4), 5, 7));
+        println!("{:?}", sensor_range_for_line(&(2, 4), 5, 10));
+    }
 
     #[test]
     fn test_parts() {
