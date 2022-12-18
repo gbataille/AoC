@@ -88,7 +88,7 @@ impl World {
 
     fn scanned_pos_with_ranges(&self, y: i32, clip: bool) -> VecDeque<(i32, i32)> {
         let min_boundary = 0;
-        let max_boundary = 20;
+        let max_boundary = 4000000;
         let mut ranges: VecDeque<(i32, i32)> = VecDeque::new();
 
         for (i, (sensor, sensor_view)) in self.sensors.iter().enumerate() {
@@ -119,14 +119,14 @@ impl World {
                             None => new_ranges.push_back(r),
                             Some(range) => {
                                 // println!("Comparing {:?} and {:?}", &range, &r);
-                                if are_overlapping(range, r) {
+                                if are_overlapping_or_touching(range, r) {
                                     let merged = merge(range, r);
                                     // println!("Overlapping, result in {:?}", &merged);
                                     cur_range = Some(merged);
                                 } else {
                                     if r.0 < range.0 {
                                         // println!(
-                                        //     "Non verlapping, pushing {:?} keeping {:?}",
+                                        //     "Non overlapping, pushing {:?} keeping {:?}",
                                         //     &r, &range
                                         // );
                                         new_ranges.push_back(r);
@@ -152,10 +152,12 @@ impl World {
                         Some(a) => new_ranges.push_back(a),
                     }
                     ranges = new_ranges;
+                    // println!("New temp ranges {:?}", ranges);
                 }
             }
         }
 
+        // println!("For {} found ranges {:?}", y, ranges);
         ranges
     }
 
@@ -234,8 +236,12 @@ fn clip_range(range: (i32, i32), min: i32, max: i32) -> (i32, i32) {
     (from, to)
 }
 
-fn are_overlapping(a: (i32, i32), b: (i32, i32)) -> bool {
-    (a.0 <= b.1 && a.0 >= b.0) || (a.1 >= b.0 && a.1 <= b.1)
+fn are_overlapping_or_touching(a: (i32, i32), b: (i32, i32)) -> bool {
+    (a.0 <= b.1 && a.0 >= b.0)
+        || (a.1 >= b.0 && a.1 <= b.1)
+        || (b.0 <= a.1 && b.0 >= a.0)
+        || b.0 == a.1 + 1
+        || a.0 == b.1 + 1
 }
 
 fn merge(a: (i32, i32), b: (i32, i32)) -> (i32, i32) {
@@ -269,7 +275,7 @@ fn part1(contents: &String) {
     }
 
     // world.display();
-    for y in [10, 11, 2000000] {
+    for y in [0, 10, 11, 2000000] {
         let ranges = world.scanned_pos_with_ranges(y, false);
         println!("\nline {}", y);
         let mut tot = 0;
@@ -281,7 +287,39 @@ fn part1(contents: &String) {
     }
 }
 
-fn part2(contents: &String) {}
+fn part2(contents: &String) {
+    let mut world = World::new();
+
+    for line in contents.lines() {
+        world.add_result(line);
+    }
+
+    for y in 0..=4000000 {
+        let ranges = world.scanned_pos_with_ranges(y, true);
+        if ranges.len() == 0 {
+            continue;
+        }
+        if ranges.len() == 1 {
+            continue;
+        }
+        if ranges.len() > 2 {
+            println!("{:?}", ranges);
+            panic!("WTF");
+        }
+
+        let x = ranges[0].1 + 1;
+        assert!(
+            x == ranges[1].0 - 1,
+            "At y {} => x: {} == {}, ranges {:?}",
+            y,
+            x,
+            ranges[1].0 - 1,
+            ranges
+        );
+        println!("Found possible beacon at ({},{})", x, y);
+        println!("Tuning at frequency {}", x as u64 * 4000000 + y as u64);
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -295,6 +333,20 @@ mod tests {
         println!("{:?}", sensor_range_for_line(&(2, 4), 5, 7));
         println!("{:?}", sensor_range_for_line(&(2, 4), 5, 7));
         println!("{:?}", sensor_range_for_line(&(2, 4), 5, 10));
+    }
+
+    #[test]
+    fn test_overlap() {
+        assert!(are_overlapping_or_touching((1, 2), (2, 3)));
+        assert!(are_overlapping_or_touching((1, 2), (3, 4)));
+        assert!(are_overlapping_or_touching((1, 4), (2, 3)));
+    }
+
+    #[test]
+    fn test_merge() {
+        assert!(merge((1, 2), (2, 3)) == (1, 3));
+        assert!(merge((1, 2), (3, 4)) == (1, 4));
+        assert!(merge((1, 4), (2, 3)) == (1, 4));
     }
 
     #[test]
