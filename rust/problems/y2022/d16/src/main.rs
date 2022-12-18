@@ -1,7 +1,27 @@
 use std::collections::HashMap;
+use std::env;
+use std::fmt::Debug;
 use std::fs;
 use std::str::FromStr;
 use std::vec::Vec;
+
+fn print_dbg(msg: &str) {
+    if env::var("DEBUG").is_ok() {
+        print!("{}", msg);
+    }
+}
+
+fn println_dbg(msg: &str) {
+    if env::var("DEBUG").is_ok() {
+        println!("{}", msg);
+    }
+}
+
+fn dbg_dbg(data: &dyn Debug) {
+    if env::var("DEBUG").is_ok() {
+        dbg!(data);
+    }
+}
 
 fn main() {
     let contents = fs::read_to_string("input.txt").expect("Should have been able to read the file");
@@ -10,7 +30,9 @@ fn main() {
     part2(&contents);
 }
 
-fn part1(contents: &String) {}
+fn part1(contents: &String) {
+    println_dbg(contents);
+}
 
 fn part2(contents: &String) {}
 
@@ -20,6 +42,8 @@ mod tests {
 
     #[test]
     fn test_parts() {
+        env::set_var("DEBUG", "true");
+
         let test_contents = String::from_str(
             "    [D]    
 [N] [C]    
