@@ -1,85 +1,67 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
 use std::vec::Vec;
+use utils::graph;
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+struct Coordinates {
+    x: i64,
+    y: i64,
+}
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 struct Node {
-    coord: (i32, i32),
-    height: i32,
+    coord: Coordinates,
+    height: i64,
 }
 
 #[derive(Debug)]
 struct Graph {
-    nodes: HashMap<(i32, i32), Rc<Node>>,
-    height: i32,
-    width: i32,
+    nodes: HashMap<Coordinates, Rc<Node>>,
+    height: i64,
+    width: i64,
 }
 
-impl Node {
-    fn accessible_neighbours(&self, graph: &Graph) -> Vec<Rc<Node>> {
+impl graph::Graphable for Graph {
+    type Node = Node;
+    type Coordinates = Coordinates;
+
+    fn coords_for(&self, node: &Self::Node) -> Self::Coordinates {
+        node.coord.clone()
+    }
+
+    fn node_at(&self, coords: &Self::Coordinates) -> Option<Rc<Self::Node>> {
+        match self.nodes.get(coords) {
+            Some(node) => Some(node.clone()),
+            None => None,
+        }
+    }
+
+    fn neighbours(&self, node: &Node) -> Vec<(Rc<Node>, i64)> {
         let mut accessible_neighbours = Vec::new();
 
-        for shift in [(0i32, 1i32), (1, 0), (0, -1), (-1, 0)] {
-            let neighbour_coord = (self.coord.0 + shift.0, self.coord.1 + shift.1);
+        for shift in [(0i64, 1i64), (1, 0), (0, -1), (-1, 0)] {
+            let neighbour_coord = Coordinates {
+                x: node.coord.x + shift.0,
+                y: node.coord.y + shift.1,
+            };
             // Exclude borders
-            if neighbour_coord.0 < 0
-                || neighbour_coord.1 < 0
-                || neighbour_coord.0 >= graph.width
-                || neighbour_coord.1 >= graph.height
+            if neighbour_coord.x < 0
+                || neighbour_coord.y < 0
+                || neighbour_coord.x >= self.width
+                || neighbour_coord.y >= self.height
             {
                 continue;
             }
 
-            let neighbour = graph.nodes[&neighbour_coord].clone();
-            if neighbour.height <= self.height + 1 {
-                accessible_neighbours.push(neighbour);
+            let neighbour = self.node_at(&neighbour_coord).clone().unwrap();
+            if neighbour.height <= node.height + 1 {
+                accessible_neighbours.push((neighbour, 1));
             }
         }
 
         accessible_neighbours
-    }
-}
-
-#[derive(Debug, Default)]
-struct Dijkstra {
-    heads: VecDeque<(u32, Rc<Node>)>,
-    seen: HashMap<Rc<Node>, u32>,
-}
-
-impl Dijkstra {
-    fn solve(&mut self, start: &(i32, i32), end: &(i32, i32), graph: &Graph) -> Option<u32> {
-        self.heads = VecDeque::new();
-        let start_node = &graph.nodes[start];
-        self.heads.push_front((0, start_node.clone()));
-        self.seen = HashMap::new();
-        self.seen.insert(start_node.clone(), 0);
-
-        loop {
-            let o_head = self.heads.pop_front();
-            let head;
-            match o_head {
-                None => {
-                    return None;
-                }
-                Some(h) => head = h,
-            }
-            let path_length = head.0 + 1;
-            for neighbor in head.1.accessible_neighbours(&graph) {
-                let neighbor_length = self.seen.get(&neighbor).unwrap_or(&std::u32::MAX);
-                if path_length < *neighbor_length {
-                    self.heads.push_back((path_length, neighbor.clone()));
-                    self.seen.insert(neighbor.clone(), path_length);
-
-                    if neighbor.coord == *end {
-                        return Some(head.0 + 1);
-                    }
-                }
-            }
-
-            // println!(">>>>>>>>>");
-            // dbg!(&self);
-        }
     }
 }
 
@@ -94,8 +76,7 @@ fn part1(contents: &String) {
     let (map, start, end) = to_map(contents);
     let graph = build_graph(&map);
 
-    let mut d = Dijkstra::default();
-    let soluce = d.solve(&start, &end, &graph);
+    let soluce = graph::find_path(&graph, &start, &end);
     match soluce {
         None => (),
         Some(min_path) => println!("Part 1's solution is {}", &min_path),
@@ -106,15 +87,17 @@ fn part2(contents: &String) {
     let (map, _start, end) = to_map(contents);
     let graph = build_graph(&map);
 
-    let mut best = std::u32::MAX;
+    let mut best = std::i64::MAX;
 
     for (y, line) in map.iter().enumerate() {
         for (x, height) in line.iter().enumerate() {
             if *height == 10 {
-                let start = (x as i32, y as i32);
+                let start = Coordinates {
+                    x: x as i64,
+                    y: y as i64,
+                };
 
-                let mut d = Dijkstra::default();
-                let soluce = d.solve(&start, &end, &graph);
+                let soluce = graph::find_path(&graph, &start, &end);
                 match soluce {
                     None => (),
                     Some(min_path) => {
@@ -130,23 +113,29 @@ fn part2(contents: &String) {
     println!("\nPart 2's best solution is {}", &best);
 }
 
-fn to_map(contents: &String) -> (Vec<Vec<i32>>, (i32, i32), (i32, i32)) {
-    let mut map: Vec<Vec<i32>> = Vec::new();
-    let mut start: (i32, i32) = (-1, -1);
-    let mut end: (i32, i32) = (-1, -1);
+fn to_map(contents: &String) -> (Vec<Vec<i64>>, Coordinates, Coordinates) {
+    let mut map: Vec<Vec<i64>> = Vec::new();
+    let mut start = Coordinates { x: -1, y: -1 };
+    let mut end = Coordinates { x: -1, y: -1 };
     for (y, line) in contents.lines().enumerate() {
-        let mut line_vec: Vec<i32> = Vec::new();
+        let mut line_vec: Vec<i64> = Vec::new();
         for (x, c) in line.chars().enumerate() {
             let val = match c {
                 'S' => {
-                    start = (x as i32, y as i32);
+                    start = Coordinates {
+                        x: x as i64,
+                        y: y as i64,
+                    };
                     10
                 }
                 'E' => {
-                    end = (x as i32, y as i32);
+                    end = Coordinates {
+                        x: x as i64,
+                        y: y as i64,
+                    };
                     35
                 }
-                letter => letter.to_digit(36).unwrap() as i32,
+                letter => letter.to_digit(36).unwrap() as i64,
             };
 
             line_vec.push(val);
@@ -158,18 +147,21 @@ fn to_map(contents: &String) -> (Vec<Vec<i32>>, (i32, i32), (i32, i32)) {
     (map, start, end)
 }
 
-fn build_graph(map: &Vec<Vec<i32>>) -> Graph {
+fn build_graph(map: &Vec<Vec<i64>>) -> Graph {
     let mut nodes = HashMap::new();
 
     for (y, line) in map.iter().enumerate() {
         for (x, height) in line.iter().enumerate() {
-            let coord = (x as i32, y as i32);
+            let coord = Coordinates {
+                x: x as i64,
+                y: y as i64,
+            };
 
             nodes.insert(
-                coord,
+                coord.clone(),
                 Rc::new(Node {
-                    coord,
-                    height: *height as i32,
+                    coord: coord.clone(),
+                    height: *height as i64,
                 }),
             );
         }
@@ -177,14 +169,15 @@ fn build_graph(map: &Vec<Vec<i32>>) -> Graph {
 
     Graph {
         nodes,
-        height: map.len() as i32,
-        width: map[0].len() as i32,
+        height: map.len() as i64,
+        width: map[0].len() as i64,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn test_to_digit() {
