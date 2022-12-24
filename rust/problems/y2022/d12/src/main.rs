@@ -1,8 +1,6 @@
-use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::fs;
-use std::rc::{Rc, Weak};
-use std::str::FromStr;
+use std::rc::Rc;
 use std::vec::Vec;
 
 #[derive(Debug, Hash, PartialEq, Eq)]
@@ -96,13 +94,11 @@ fn part1(contents: &String) {
     let (map, start, end) = to_map(contents);
     let graph = build_graph(&map);
 
-    println!("Going from {:?} to {:?}", start, end);
-
     let mut d = Dijkstra::default();
     let soluce = d.solve(&start, &end, &graph);
     match soluce {
-        None => println!("No solution"),
-        Some(min_path) => println!("Solution is {}", &min_path),
+        None => (),
+        Some(min_path) => println!("Part 1's solution is {}", &min_path),
     }
 }
 
@@ -116,14 +112,12 @@ fn part2(contents: &String) {
         for (x, height) in line.iter().enumerate() {
             if *height == 10 {
                 let start = (x as i32, y as i32);
-                println!("Going from {:?} to {:?}", start, end);
 
                 let mut d = Dijkstra::default();
                 let soluce = d.solve(&start, &end, &graph);
                 match soluce {
-                    None => println!("No solution"),
+                    None => (),
                     Some(min_path) => {
-                        println!("Solution is {}", &min_path);
                         if min_path < best {
                             best = min_path;
                         }
@@ -133,7 +127,7 @@ fn part2(contents: &String) {
         }
     }
 
-    println!("\n Best solution is {}", &best);
+    println!("\nPart 2's best solution is {}", &best);
 }
 
 fn to_map(contents: &String) -> (Vec<Vec<i32>>, (i32, i32), (i32, i32)) {
