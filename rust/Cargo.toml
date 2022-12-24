@@ -7,6 +7,8 @@ edition = "2021"
 
 [workspace]
 members = [
+  "utils",
+
   "problems/y2022/d1",
   "problems/y2022/d2",
   "problems/y2022/d3",
@@ -35,3 +37,4 @@ members = [
 ]
 
 [dependencies]
+utils = { path = "./utils" }
