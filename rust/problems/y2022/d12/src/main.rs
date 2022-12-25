@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::fs;
 use std::rc::Rc;
 use std::vec::Vec;
@@ -10,13 +11,19 @@ struct Coordinates {
     y: i64,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Hash, PartialEq, Eq, Clone)]
 struct Node {
     coord: Coordinates,
     height: i64,
 }
 
-#[derive(Debug)]
+impl Debug for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("({}, {})", self.coord.x, self.coord.y))
+    }
+}
+
+#[derive(Debug, Clone)]
 struct Graph {
     nodes: HashMap<Coordinates, Rc<Node>>,
     height: i64,
@@ -76,10 +83,15 @@ fn part1(contents: &String) {
     let (map, start, end) = to_map(contents);
     let graph = build_graph(&map);
 
-    let soluce = graph::find_path(&graph, &start, &end);
+    let soluce = graph::find_shortest_dist(&graph, &start, &end);
     match soluce {
         None => (),
         Some(min_path) => println!("Part 1's solution is {}", &min_path),
+    }
+    let soluce = graph::find_shortest_path(&graph, &start, &end);
+    match soluce {
+        None => println!("No solution"),
+        Some(min_path) => println!("Part 1's solution is {}", &min_path.length()),
     }
 }
 
@@ -97,7 +109,7 @@ fn part2(contents: &String) {
                     y: y as i64,
                 };
 
-                let soluce = graph::find_path(&graph, &start, &end);
+                let soluce = graph::find_shortest_dist(&graph, &start, &end);
                 match soluce {
                     None => (),
                     Some(min_path) => {
