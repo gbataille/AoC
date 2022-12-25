@@ -33,6 +33,7 @@ struct Graph {
 impl graph::Graphable for Graph {
     type Node = Node;
     type Coordinates = Coordinates;
+    type PathWeight = i64;
 
     fn coords_for(&self, node: &Self::Node) -> Self::Coordinates {
         node.coord.clone()
@@ -83,15 +84,11 @@ fn part1(contents: &String) {
     let (map, start, end) = to_map(contents);
     let graph = build_graph(&map);
 
-    let soluce = graph::find_shortest_dist(&graph, &start, &end);
-    match soluce {
-        None => (),
-        Some(min_path) => println!("Part 1's solution is {}", &min_path),
-    }
-    let soluce = graph::find_shortest_path(&graph, &start, &end);
+    let mut pf = graph::PathFinder::new(&start, &end, &graph).unwrap();
+    let soluce = pf.find_shortest_dist();
     match soluce {
         None => println!("No solution"),
-        Some(min_path) => println!("Part 1's solution is {}", &min_path.length()),
+        Some(min_path) => println!("Part 1's solution is {}", &min_path),
     }
 }
 
@@ -109,7 +106,8 @@ fn part2(contents: &String) {
                     y: y as i64,
                 };
 
-                let soluce = graph::find_shortest_dist(&graph, &start, &end);
+                let mut pf = graph::PathFinder::new(&start, &end, &graph).unwrap();
+                let soluce = pf.find_shortest_dist();
                 match soluce {
                     None => (),
                     Some(min_path) => {

@@ -1,235 +1,145 @@
-use super::debug;
+use num::traits::Zero;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::ops::Add;
 use std::rc::Rc;
 use std::vec::Vec;
 
 pub trait Graphable {
     type Node: Hash + Eq + Debug + Clone;
     type Coordinates: Eq + Debug + Clone;
+    type PathWeight: Hash + Eq + Debug + Clone + Add + Zero + Ord;
 
     fn coords_for(&self, node: &Self::Node) -> Self::Coordinates;
     fn node_at(&self, coords: &Self::Coordinates) -> Option<Rc<Self::Node>>;
-    fn neighbours(&self, node: &Self::Node) -> Vec<(Rc<Self::Node>, i64)>;
+    fn neighbours(&self, node: &Self::Node) -> Vec<(Rc<Self::Node>, Self::PathWeight)>;
 }
 
-#[derive(Clone)]
-pub struct Path<T: Graphable + Clone + Debug> {
-    head: Rc<T::Node>,
-    node_path: Vec<Rc<T::Node>>,
-    nodes: HashMap<Rc<T::Node>, i64>,
-    tot_length: i64,
+#[derive(Debug)]
+pub struct PathFinder<'a, T: Graphable> {
+    start_node: Rc<T::Node>,
+    end_node: Rc<T::Node>,
+    graph: &'a T,
+
+    ordered_heads: VecDeque<Rc<PathElem<T>>>,
+    best_heads_index: HashMap<Rc<T::Node>, T::PathWeight>,
 }
 
-impl<T: Graphable + Clone + Debug> Debug for Path<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("Path ["))?;
-        for node in self.node_path.iter() {
-            let dist = self.nodes.get(node).unwrap();
-            f.write_fmt(format_args!("{:?}:{},", node, dist))?;
-        }
-        f.write_fmt(format_args!("] - length {}", self.tot_length))
+#[derive(Debug, Hash, Eq, PartialEq)]
+struct PathElem<T: Graphable> {
+    node: Rc<T::Node>,
+    length_to_node: T::PathWeight,
+    previous_node: Option<Rc<PathElem<T>>>,
+}
+
+impl<'a, T: Graphable> PathFinder<'a, T> {
+    pub fn new(
+        start_node_coord: &T::Coordinates,
+        end_node_coord: &T::Coordinates,
+        graph: &'a T,
+    ) -> Result<Self, ()> {
+        let start_node = graph.node_at(start_node_coord).ok_or(())?;
+        let end_node = graph.node_at(end_node_coord).ok_or(())?;
+
+        let start_path_elem = Rc::new(PathElem {
+            node: start_node.clone(),
+            length_to_node: T::PathWeight::zero(),
+            previous_node: None,
+        });
+
+        let mut best_heads_index = HashMap::new();
+        best_heads_index.insert(start_node.clone(), T::PathWeight::zero());
+
+        let mut ordered_heads = VecDeque::new();
+        ordered_heads.push_back(start_path_elem.clone());
+
+        Ok(PathFinder {
+            start_node: start_node.clone(),
+            end_node: end_node.clone(),
+            graph,
+            ordered_heads,
+            best_heads_index,
+        })
     }
-}
 
-impl<T: Graphable + Clone + Debug> Path<T> {
-    fn grow(&mut self, node: Rc<T::Node>, path_length: i64) -> Result<(), ()> {
-        if self.nodes.contains_key(&node) {
-            return Err(());
-        }
-        self.tot_length += path_length;
-        self.node_path.push(node.clone());
-        self.nodes.insert(node.clone(), self.tot_length);
-        self.head = node.clone();
-
+    pub fn reset_to(
+        &mut self,
+        start_node_coord: &T::Coordinates,
+        end_node_coord: &T::Coordinates,
+    ) -> Result<(), ()> {
+        let start_node = self.graph.node_at(start_node_coord).ok_or(())?;
+        let end_node = self.graph.node_at(end_node_coord).ok_or(())?;
+        self.start_node = start_node.clone();
+        self.end_node = end_node.clone();
         Ok(())
     }
 
-    pub fn length(&self) -> i64 {
-        self.tot_length
+    pub fn find_shortest_dist(&mut self) -> Option<T::PathWeight> {
+        let res = self.solve()?;
+        Some(res.length_to_node.clone())
     }
-}
 
-pub fn find_shortest_dist<T: Graphable>(
-    graph: &T,
-    start: &T::Coordinates,
-    end: &T::Coordinates,
-) -> Option<i64> {
-    let mut heads = VecDeque::new();
-    let mut seen = HashMap::new();
+    pub fn find_shortest_path(&mut self) -> Option<(Vec<Rc<T::Node>>, T::PathWeight)> {
+        let head = self.solve()?;
+        let length = head.length_to_node.clone();
 
-    let start_node = graph.node_at(start).unwrap();
-    heads.push_front((0, start_node.clone()));
-    seen.insert(start_node.clone(), 0);
+        let mut path: Vec<Rc<T::Node>> = Vec::new();
 
-    loop {
-        let o_head = heads.pop_front();
-        let head;
-        match o_head {
-            None => {
-                return None;
-            }
-            Some(h) => head = h,
-        }
-        let path_length = head.0 + 1;
-        for (neighbour, _weight) in graph.neighbours(&head.1) {
-            let min_path_to_neighbour_length = seen.get(&neighbour).unwrap_or(&std::i64::MAX);
-            if path_length < *min_path_to_neighbour_length {
-                heads.push_back((path_length, neighbour.clone()));
-                seen.insert(neighbour.clone(), path_length);
-
-                if graph.coords_for(&neighbour) == *end {
-                    return Some(head.0 + 1);
-                }
+        let mut cur_elem = head;
+        loop {
+            path.push(cur_elem.node.clone());
+            match &cur_elem.previous_node {
+                None => break,
+                Some(elem) => cur_elem = elem.clone(),
             }
         }
+        path.reverse();
+        Some((path, length))
     }
-}
 
-pub fn find_shortest_path<T: Graphable + Clone + Debug>(
-    graph: &T,
-    start: &T::Coordinates,
-    end: &T::Coordinates,
-) -> Option<Path<T>> {
-    let mut paths: VecDeque<Path<T>> = VecDeque::new();
-    let mut min_length_to: HashMap<Rc<T::Node>, i64> = HashMap::new();
-    let mut soluces: VecDeque<Path<T>> = VecDeque::new();
+    fn solve(&mut self) -> Option<Rc<PathElem<T>>> {
+        loop {
+            let head = self.ordered_heads.pop_front()?;
 
-    // Start with a single path of length 0, at the starting node
-    let start_node = graph.node_at(start).unwrap();
-    let mut starting_nodes = HashMap::new();
-    starting_nodes.insert(start_node.clone(), 0);
-    paths.push_front(Path {
-        head: start_node.clone(),
-        node_path: vec![start_node.clone()],
-        nodes: starting_nodes,
-        tot_length: 0,
-    });
-    min_length_to.insert(start_node.clone(), 0);
-
-    loop {
-        // Takes the first path. It assumes that paths is sorted by total_length. We try to grow only
-        // the shortest path
-        let opt_to_grow = paths.pop_front();
-        let to_grow: Path<T>;
-
-        match opt_to_grow {
-            None => break,
-            Some(p) => to_grow = p,
-        }
-        debug::debug(format!("\nGrowing {:?}", to_grow));
-
-        // The first path in soluce (if any) is the shortest solution found so far.
-        // If our next path to grow is longer, then we have already found the best soluce
-        let best_soluce = soluces.get(0);
-        match best_soluce {
-            None => (),
-            Some(soluce) => {
-                if soluce.tot_length < to_grow.tot_length {
-                    debug::debug(format!(
-                        "Trying to grow {:?} that is longer than soluce {:?}. Stopping",
-                        to_grow, soluce
-                    ));
-                    break;
-                }
-                ()
-            }
-        }
-
-        // Checking if this path is still interesting
-        let head = to_grow.head.clone();
-        let best_path_to_head = min_length_to.get(&head).unwrap_or(&std::i64::MAX);
-        if to_grow.tot_length > *best_path_to_head {
-            debug::debug(format!("Path {:?} is now obsolete, skipping", to_grow));
-            break;
-        }
-
-        // Try to add each of its head's neighbours
-        for (neighbour, distance) in graph.neighbours(&to_grow.head) {
-            let mut new_path = to_grow.clone();
-            let res = new_path.grow(neighbour.clone(), distance);
-            debug::debug(format!(
-                "Trying head {:?} for a new path {:?} at length {}",
-                neighbour, new_path.node_path, new_path.tot_length
-            ));
-            if res.is_err() {
-                debug::debug(format!("Path is looping, discarding"));
-                continue;
+            // if the next (i.e. next shortest path) is the end, that means that we are done
+            if self.graph.coords_for(head.node.as_ref())
+                == self.graph.coords_for(self.end_node.as_ref())
+            {
+                return Some(head.clone());
             }
 
-            // Check if we have already seen this head
-            let seen_head = min_length_to.get(&neighbour);
-            match seen_head {
-                None => {
-                    // replace the shortest path
-                    min_length_to.insert(neighbour.clone(), new_path.tot_length);
-                    // if we have reached the end, do not try to grow this path anymore
-                    if graph.coords_for(&neighbour) == *end {
-                        let insert_at =
-                            soluces.partition_point(|path| path.tot_length < new_path.tot_length);
-                        soluces.insert(insert_at, new_path);
-                        debug::debug(format!("Kept"));
-                        debug::debug(format!(
-                            "Inserting in soluces at {} - {:?}",
-                            insert_at, &soluces
-                        ));
-                    } else {
-                        // adds the new path in the right place (sorted)
-                        let insert_at =
-                            paths.partition_point(|path| path.tot_length < new_path.tot_length);
-                        paths.insert(insert_at, new_path);
-                        debug::debug(format!("Kept"));
-                        debug::debug(format!(
-                            "Inserting in paths at {} - {:?}",
-                            insert_at, &paths
-                        ));
-                    }
-                }
-                Some(seen_length) => {
-                    // Check if the new path is shorter
-                    // If it is, truncate all the other paths that go through this head in a longer
-                    // way
-                    // If it is not, drop the path
-                    if *seen_length <= new_path.tot_length {
-                        debug::debug(format!("Discarded due to better path already seen"));
-                        continue;
-                    } else {
-                        debug::debug(format!(
-                            "New shortest path to {:?}, of length {}",
-                            &neighbour, new_path.tot_length
-                        ));
-                        // replace the shortest path
-                        min_length_to.insert(neighbour.clone(), new_path.tot_length);
-                        // if we have reached the end, do not try to grow this path anymore
-                        if graph.coords_for(&neighbour) == *end {
-                            let insert_at = soluces
-                                .partition_point(|path| path.tot_length < new_path.tot_length);
-                            soluces.insert(insert_at, new_path);
-                            debug::debug(format!("Kept"));
-                            debug::debug(format!(
-                                "Inserting in soluces at {} - {:?}",
-                                insert_at, &soluces
-                            ));
-                        } else {
-                            // adds the new path in the right place (sorted)
-                            let insert_at =
-                                paths.partition_point(|path| path.tot_length < new_path.tot_length);
-                            paths.insert(insert_at, new_path);
-                            debug::debug(format!("Kept"));
-                            debug::debug(format!(
-                                "Inserting in paths at {} - {:?}",
-                                insert_at, &paths
-                            ));
+            for (neighbour, weight) in self.graph.neighbours(head.node.as_ref()) {
+                let new_path_length = head.length_to_node.clone() + weight;
+
+                let min_path_to_neighbour_length = self.best_heads_index.get(&neighbour);
+
+                match min_path_to_neighbour_length {
+                    None => (),
+                    Some(length) => {
+                        if new_path_length >= *length {
+                            // we already have a better solution
+                            continue;
                         }
                     }
                 }
+
+                self.best_heads_index
+                    .insert(neighbour.clone(), new_path_length.clone());
+                let insert_at = self
+                    .ordered_heads
+                    .partition_point(|elem| elem.length_to_node < new_path_length);
+                self.ordered_heads.insert(
+                    insert_at,
+                    Rc::new(PathElem {
+                        node: neighbour.clone(),
+                        length_to_node: new_path_length,
+                        previous_node: Some(head.clone()),
+                    }),
+                );
             }
         }
-        debug::debug(format!("{:?}", &paths));
     }
-
-    soluces.get(0).cloned()
 }
 
 #[cfg(test)]
@@ -263,6 +173,7 @@ mod tests {
     impl Graphable for Graph {
         type Node = Node;
         type Coordinates = Coordinates;
+        type PathWeight = i64;
 
         fn coords_for(&self, node: &Self::Node) -> Self::Coordinates {
             node.coord.clone()
@@ -344,22 +255,14 @@ mod tests {
             }
         }
 
-        let res = find_shortest_dist(
-            &graph,
+        let mut pf = PathFinder::new(
             &Coordinates { x: 0, y: 0 },
             &Coordinates { x: 3, y: 4 },
-        );
+            &graph,
+        )
+        .unwrap();
+        let res = pf.find_shortest_dist();
         assert!(res.is_some());
         assert!(res.unwrap() == 7);
-
-        let res = find_shortest_path(
-            &graph,
-            &Coordinates { x: 0, y: 0 },
-            &Coordinates { x: 3, y: 4 },
-        );
-        assert!(res.is_some());
-        let path = res.unwrap();
-        assert!(*&path.nodes.len() == 8);
-        assert!(*&path.tot_length == 7);
     }
 }
